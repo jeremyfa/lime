@@ -45,7 +45,7 @@
     LOG_SOUND("AVAudioPlayerChannelDelegate audioPlayerDidFinishPlaying()");
     LOG_SOUND("loops : %d", loops );
     LOG_SOUND("offset : %f", offset);
-    
+
     if (loops == 0) {
         LOG_SOUND("finished the mandated number of loops");
         isPlaying = false;
@@ -59,7 +59,7 @@
         // a handle to the channel here, so we can't notify him.
         // So what we do instead is we'll let the channel release
         // both the player and the delegate when he'll find out that the
-        // player is not playing anymore.        
+        // player is not playing anymore.
     }
     else {
         LOG_SOUND("still some loops to go, playing");
@@ -74,9 +74,9 @@
 
 namespace nme
 {
-    
-    
-    
+
+
+
     /*----------------------------------------------------------
      AVSoundPlayer implementation of Sound and SoundChannel classes:
      - higher latency than OpenAL implementation
@@ -84,9 +84,9 @@ namespace nme
      - doesn't allocate uncompressed sound data in memory
      - doesn't expose sound data
      ------------------------------------------------------------*/
-    
+
     class AVAudioPlayerChannel : public SoundChannel  {
-        
+
     public:
         AVAudioPlayerChannel(Object *inSound, const std::string &inFilename,
             NSData *data,
@@ -96,23 +96,23 @@ namespace nme
             mSound = inSound;
             // each channel keeps the originating Sound object alive.
             inSound->IncRef();
-           
+
             LOG_SOUND("AVAudioPlayerChannel constructor - allocating and initilising the AVAudioPlayer");
 
             if (data == NULL) {
                 LOG_SOUND("AVAudioPlayerChannel construct with name");
                 std::string name;
-                
+
                 if (inFilename[0] == '/') {
                     name = inFilename;
                 } else {
                     name = GetResourcePath() + gAssetBase + inFilename;
                 }
-                
+
                 NSString *theFileName = [[NSString alloc] initWithUTF8String:name.c_str()];
-                
+
                 NSURL  *theFileNameAndPathAsUrl = [NSURL fileURLWithPath:theFileName ];
-                
+
                 theActualPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:theFileNameAndPathAsUrl error: nil];
 #ifndef OBJC_ARC
                 [theFileName release];
@@ -130,7 +130,7 @@ namespace nme
             LOG_SOUND("AVAudioPlayerChannel constructor - allocating and initialising the delegate");
             thePlayerDelegate = [[AVAudioPlayerChannelDelegate alloc] initWithLoopsOffset:inLoops offset:inOffset];
             [theActualPlayer setDelegate:thePlayerDelegate];
-            
+
             // the sound channel has been created because play() was called
             // on a Sound, so let's play
             LOG_SOUND("AVAudioPlayerChannel constructor - getting the player to play at offset %f", inOffset);
@@ -139,30 +139,30 @@ namespace nme
                 [theActualPlayer setPan: inTransform.pan];
             [theActualPlayer setVolume: inTransform.volume];
             [theActualPlayer play];
-            
+
             LOG_SOUND("AVAudioPlayerChannel constructor exiting");
         }
-        
+
         ~AVAudioPlayerChannel()
         {
             LOG_SOUND("AVAudioPlayerChannel destructor");
-            
+
             // when all channels associated with a sound
             // are all destroyed, then the Sound that generates
             // them might be destroyed (if there are no other
             // references to it anywhere else)
             mSound->DecRef();
         }
-        
+
         void playerHasFinishedDoingItsJob() {
             theActualPlayer = nil;
         }
-        
+
         bool isComplete()
         {
-            //LOG_SOUND("AVAudioPlayerChannel isComplete()"); 
+            //LOG_SOUND("AVAudioPlayerChannel isComplete()");
             bool isPlaying;
-            
+
             if (theActualPlayer == nil) {
                 // The AVAudioPlayer has been released before
                 // , maybe by a stop() or maybe because
@@ -173,15 +173,15 @@ namespace nme
                 isPlaying = false;
             }
             else {
-                //LOG_SOUND("AVAudioPlayerChannel invoking isPlaying"); 
-                
+                //LOG_SOUND("AVAudioPlayerChannel invoking isPlaying");
+
                 // note that we ask the delegate, not the AVAudioPlayer
                 // the reason is that technically AVAudioPlayer might not be playing,
                 // but we are in the process of restarting it to play a loop,
                 // and we don't want to stop him. So we ask the delegate, which
                 // knows when all the loops are properly done.
                 isPlaying = [thePlayerDelegate isPlaying];
-                
+
                 if (!isPlaying) {
                     // the channel is completely done playing, so we mark
                     // both the channel and its delegate eligible for destruction (if no-one
@@ -197,14 +197,14 @@ namespace nme
                     thePlayerDelegate = nil;
                 }
             }
-            
-            //LOG_SOUND("AVAudioPlayerSound isComplete() returning%@\n", (!isPlaying ? @"YES" : @"NO")); 
+
+            //LOG_SOUND("AVAudioPlayerSound isComplete() returning%@\n", (!isPlaying ? @"YES" : @"NO"));
             return !isPlaying;
         }
-        
+
         double getLeft()  {
             LOG_SOUND("AVAudioPlayerChannel getLeft()");
-            if ([theActualPlayer respondsToSelector: NSSelectorFromString(@"setPan")])	   
+            if ([theActualPlayer respondsToSelector: NSSelectorFromString(@"setPan")])
             {
                 return (1-[theActualPlayer pan])/2;
             }
@@ -244,7 +244,7 @@ namespace nme
         {
             LOG_SOUND("AVAudioPlayerChannel stop()");
             [theActualPlayer stop];
-            
+
             // note that once a channel has been stopped, it's destined
             // to be deallocated. It will never play another sound again
             // we decrease the reference count here of both the player
@@ -258,17 +258,17 @@ namespace nme
             #endif
             theActualPlayer = nil;
             thePlayerDelegate = nil;
-            
+
         }
-        
-        
+
+
         Object *mSound;
         AVAudioPlayer *theActualPlayer;
         AVAudioPlayerChannelDelegate *thePlayerDelegate;
-        
+
     };
-    
-    
+
+
     class AVAudioPlayerSound : public Sound
     {
     public:
@@ -276,13 +276,13 @@ namespace nme
         {
             LOG_SOUND("AVAudioPlayerSound constructor()");
             IncRef();
-            
+
             // we copy the filename to a local variable,
             // We pass the filename to create one AVSoundPlayer
             // each time the sound is played.
             // Note that we don't need the path, the filename suffices.
             //theFileName = [[NSString alloc] initWithUTF8String:inFilename.c_str()];
-            
+
             // to answer the getLength() method and to see whether there will be any
             // ploblems loading the file we create an "initial" AVAudioPlayer
             // that we'll never actually use to play anything. We just get the length and
@@ -290,7 +290,7 @@ namespace nme
             // release it soon after. Note that
             // no buffers are loaded until we invoke either the play or prepareToPlay
             // methods, so very little memory is used.
-            
+
             this->data = nil;
 
             std::string path = GetResourcePath() + gAssetBase + inFilename;
@@ -299,58 +299,58 @@ namespace nme
             #ifndef OBJC_ARC
             [ns_name release];
             #endif
-            
+
             NSError *err = nil;
             AVAudioPlayer *theActualPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:theFileNameAndPathAsUrl error:&err];
             if (err != nil)
             {
                 mError = [[err description] UTF8String];
             }
-            
+
             theDuration = [theActualPlayer duration] * 1000;
             #ifndef OBJC_ARC
             [theActualPlayer release];
             #endif
         }
-        
+
         AVAudioPlayerSound(float *inDataPtr, int inDataLen)
         {
             mFilename = "unknown";
-            
+
             LOG_SOUND("AVAudioPlayerSound constructor()");
             IncRef();
-            
+
             //printf("AVAudioPlayerSound!!");
-            
+
             this->data = [[NSData alloc] initWithBytes:inDataPtr length:inDataLen];
-            
+
             NSError *err = nil;
             AVAudioPlayer *theActualPlayer = [[AVAudioPlayer alloc] initWithData:data error:&err];
             if (err != nil)
             {
                 mError = [[err description] UTF8String];
             }
-            
+
             theDuration = [theActualPlayer duration] * 1000;
 #ifndef OBJC_ARC
             [theActualPlayer release];
 #endif
         }
-        
+
         ~AVAudioPlayerSound()
         {
             LOG_SOUND("AVAudioPlayerSound destructor() ##################################");
         }
-        
+
         double getLength()
         {
             LOG_SOUND("AVAudioPlayerSound getLength returning %f", theDuration);
-            
+
             // we got the duration stored already and each Sound only ever
             // loads one file - so no need to re-check, return what we have
             return theDuration;
         }
-        
+
         void getID3Value(const std::string &inKey, std::string &outValue)
         {
             LOG_SOUND("AVAudioPlayerSound getID3Value returning empty string");
@@ -371,38 +371,38 @@ namespace nme
         bool ok()
         {
             bool toBeReturned = mError.empty();
-            LOG_SOUND("AVAudioPlayerSound ok() returning BOOL = %s\n", (toBeReturned ? "YES" : "NO")); 
+            LOG_SOUND("AVAudioPlayerSound ok() returning BOOL = %s\n", (toBeReturned ? "YES" : "NO"));
             return toBeReturned;
         }
         std::string getError()
         {
-            LOG_SOUND("AVAudioPlayerSound getError()"); 
+            LOG_SOUND("AVAudioPlayerSound getError()");
             return mError;
         }
-        
+
         void close()
         {
-            LOG_SOUND("AVAudioPlayerSound close() doing nothing"); 
+            LOG_SOUND("AVAudioPlayerSound close() doing nothing");
         }
-        
+
         // This method is called when Sound.play is called.
         SoundChannel *openChannel(double startTime, int loops, const SoundTransform &inTransform)
         {
-            LOG_SOUND("AVAudioPlayerSound openChannel() startTime=%f, loops = %d",startTime,loops); 
+            LOG_SOUND("AVAudioPlayerSound openChannel() startTime=%f, loops = %d",startTime,loops);
             //return new AVAudioPlayerChannel(this,mBufferID,loops,inTransform);
-            
+
             // this creates the channel, note that the channel is an AVAudioPlayer that plays
             // right away
             return new AVAudioPlayerChannel(this, mFilename, data, loops, startTime, inTransform);
         }
-        
+
         std::string mError;
         std::string mFilename;
         double theDuration;
         NSData *data;
     };
-    
-    
+
+
     Sound *Sound::Create(const std::string &inFilename,bool inForceMusic)
     {
         // Here we pick a Sound object based on either OpenAL or Apple's AVSoundPlayer
@@ -418,26 +418,26 @@ namespace nme
         //
         // By default the OpenAL implementation is picked, while AVAudioPlayer is used then
         // inForceMusic is true.
-        
+
         LOG_SOUND("Sound.mm Create()\n");
 
         std::string fileURL;
-        
+
         if (inFilename[0] == '/') {
             fileURL = inFilename;
         } else {
             fileURL = GetResourcePath() + gAssetBase + inFilename;
         }
-        
+
         AudioFormat type = Audio::determineFormatFromFile(fileURL);
-        
+
         if (type == eAF_ogg || !inForceMusic)
         {
             if (!OpenALInit())
                 return 0;
-            
+
             OpenALSound *sound = new OpenALSound(inFilename, inForceMusic);
-            
+
             if (sound->ok ())
                return sound;
             else
@@ -448,8 +448,8 @@ namespace nme
             return new AVAudioPlayerSound(inFilename);
         }
     }
-    
-    
+
+
     Sound *Sound::Create(float *inData, int len, bool inForceMusic)
     {
         // Here we pick a Sound object based on either OpenAL or Apple's AVSoundPlayer
@@ -465,7 +465,7 @@ namespace nme
         //
         // By default the OpenAL implementation is picked, while AVAudioPlayer is used then
         // inForceMusic is true.
-        
+
         LOG_SOUND("Sound.mm Create()\n");
         if (inForceMusic)
         {
@@ -476,13 +476,13 @@ namespace nme
             if (!OpenALInit())
                 return 0;
             OpenALSound *sound = new OpenALSound(inData, len);
-            
+
             if (sound->ok ())
                return sound;
             else
                return 0;
         }
     }
-    
-    
+
+
 } // end namespace nme
